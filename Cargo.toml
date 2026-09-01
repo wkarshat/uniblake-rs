@@ -1,0 +1,26 @@
+[package]
+name = "uniblake-rs"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+license = "MIT"
+description = "BLAKE2b with specified eager absorption and a shared-prefix fast path"
+repository = "https://github.com/wkarshat/uniblake-rs"
+categories = ["cryptography", "no-std"]
+keywords = ["blake2", "blake2b", "hash"]
+
+# The package is uniblake-rs, to match the repository and to sit beside the C
+# uniblake without ambiguity. The library keeps the shorter name so callers
+# write `uniblake::Params`, not `uniblake_rs::Params`.
+[lib]
+name = "uniblake"
+
+# No dependencies. See docs/DESIGN.md A5.
+[dependencies]
+
+[dev-dependencies]
+blake2b_simd = "1.0"   # oracle only
+
+[profile.bench]
+lto = true
+codegen-units = 1
