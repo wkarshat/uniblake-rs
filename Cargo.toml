@@ -1,8 +1,18 @@
 [package]
 name = "uniblake-rs"
 version = "0.1.0"
+# Edition 2021, not 2024, to keep the MSRV low: edition 2024 requires rustc
+# 1.85, and nothing here needs it. The library uses no feature newer than
+# edition 2021 itself, which is rustc 1.56.
+#
+# rust-version 1.63 is measured: the library builds there. It is not
+# necessarily the floor -- nothing below 1.63 has been tested -- but it is a
+# claim backed by a build rather than by reading feature history.
+#
+# The dev-dependency oracle needs a newer toolchain than the library does, so
+# `cargo test` has a higher effective floor than `cargo build --lib`.
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.63"
 license = "MIT"
 description = "BLAKE2b with specified eager absorption and a shared-prefix fast path"
 repository = "https://github.com/wkarshat/uniblake-rs"
