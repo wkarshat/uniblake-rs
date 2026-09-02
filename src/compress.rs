@@ -54,6 +54,13 @@ fn g(v: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y: u64) 
 /// finalization flag; both are the caller's to set, because finalization
 /// compresses a block whose counter must not advance.
 ///
+/// The mixing function and the SIGMA schedule are transcribed from RFC 7693 --
+/// G from s3.1, whose pseudocode fixes both the operation order and the
+/// parameter names, and SIGMA from s2.7. Any conforming implementation has
+/// these same lines; they are not adapted from another crate, and this crate
+/// contains no third-party code. `blake2b_simd` appears only as a
+/// dev-dependency oracle in tests.
+///
 /// The twelve rounds are fully unrolled. Partial unrolling was measured and is
 /// worse at every factor tried, on an Apple M4 Pro:
 ///
