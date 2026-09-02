@@ -5,12 +5,9 @@ version = "0.1.0"
 # 1.85, and nothing here needs it. The library uses no feature newer than
 # edition 2021 itself, which is rustc 1.56.
 #
-# rust-version 1.63 is measured: the library builds there. It is not
-# necessarily the floor -- nothing below 1.63 has been tested -- but it is a
-# claim backed by a build rather than by reading feature history.
-#
-# The dev-dependency oracle needs a newer toolchain than the library does, so
-# `cargo test` has a higher effective floor than `cargo build --lib`.
+# rust-version 1.63 is measured: the library builds there. The practical
+# target is what a current LTS ships -- rustc 1.75 -- where the library builds
+# and the full test suite passes with the pinned oracle below.
 edition = "2021"
 rust-version = "1.63"
 license = "MIT"
@@ -29,7 +26,11 @@ name = "uniblake"
 [dependencies]
 
 [dev-dependencies]
-blake2b_simd = "1.0"   # oracle only
+# Pinned: 1.0.3+ moved to edition 2024 and constant_time_eq 0.4.2, which
+# together require rustc 1.85. Neither is a code requirement -- 1.0.5's source
+# builds on 1.69 with the manifest reverted -- so the pin costs nothing but
+# keeps `cargo test` working on the toolchain a current LTS ships (1.75).
+blake2b_simd = "=1.0.2"   # oracle only
 
 [profile.bench]
 lto = true

@@ -136,20 +136,20 @@ in the portable path.
 **A7 Lint cleanliness.** `cargo clippy -- -D warnings` and `cargo fmt --check`
 pass. `#![deny(missing_docs)]` on the public API.
 
-## 6. Milestones
+## 6. Phases
 
-Each milestone ends with its tests passing and its criteria measured. No
-milestone begins before the previous one's criteria are recorded.
+Each phase ends with its tests passing and its criteria measured. No phase
+begins before the previous one's criteria are recorded.
 
 | # | delivers | criteria |
 |---|---|---|
-| M1 | compression function, `State`, `update`, `finalize`, published vectors | A1 (vectors), A5, A7 |
-| M2 | `Params` builder: `hash_length`, `key`, `salt`, `personal`; oracle tests against `blake2b_simd` | A1 (full), A6 |
-| M3 | prefix layer: `Prefix`, `hash_tail`, geometry check; compression counting | A2 |
-| M4 | benchmarks against C uniblake and `blake2b_simd` | A3, A4 |
-| M5 | batch entry point `hash_n`, output stride and slicing | A2 at batch scale |
+| P1 | compression function, `State`, `update`, `finalize`, published vectors | A1 (vectors), A5, A7 |
+| P2 | `Params` builder: `hash_length`, `key`, `salt`, `personal`; oracle tests against `blake2b_simd` | A1 (full), A6 |
+| P3 | prefix layer: `Prefix`, `hash_tail`, geometry check; compression counting | A2 |
+| P4 | benchmarks against C uniblake and `blake2b_simd` | A3, A4 |
+| P5 | batch entry point `hash_n`, output stride and slicing | A2 at batch scale |
 
-Milestones M1-M3 are the library. M4 decides whether M5 is worth building: if
+Phases P1-P3 are the library. P4 decides whether P5 is worth building: if
 A3 and A4 fail badly and the cause is structural rather than a fixable
 mistake, the honest outcome is to record that and stop.
 

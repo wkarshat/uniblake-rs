@@ -23,7 +23,15 @@ use crate::{Hash, BLOCK_BYTES, OUT_BYTES};
 #[derive(Clone, Debug)]
 pub struct State {
     h: [u64; 8],
-    t: u128,
+    // Two u64 rather than one u128, deliberately. u128's alignment is
+    // target-dependent -- 8 on x86-64 before rustc 1.77, 16 after, and 16 on
+    // aarch64 throughout -- and the tail padding that follows from it changed
+    // size_of::<State>() between 216 and 224 across targets and toolchains.
+    // Nothing else in this struct has ABI-dependent alignment, so removing the
+    // u128 makes the size genuinely invariant instead of merely asserted. This
+    // mirrors the C library, whose state holds `uint64_t t[2]` for the same
+    // reason. Order is [low, high].
+    t: [u64; 2],
     buf: [u8; BLOCK_BYTES],
     // u8 rather than usize: both are bounded by 128 and 64, and the state is
     // cloned once per digest in the prefix workload, so its size is on the
@@ -44,7 +52,7 @@ impl State {
     pub(crate) fn from_parts(h: [u64; 8], outlen: usize) -> Self {
         Self {
             h,
-            t: 0,
+            t: [0, 0],
             buf: [0; BLOCK_BYTES],
             buflen: 0,
             outlen: outlen as u8,
@@ -53,7 +61,8 @@ impl State {
 
     /// Compress one full block, advancing the counter. Not finalization.
     pub(crate) fn absorb(&mut self, block: &[u8; BLOCK_BYTES]) {
-        self.t += BLOCK_BYTES as u128;
+        self.t[0] = self.t[0].wrapping_add(BLOCK_BYTES as u64);
+        self.t[1] = self.t[1].wrapping_add(u64::from(self.t[0] < BLOCK_BYTES as u64));
         compress(&mut self.h, block, self.t, false);
     }
 
@@ -116,7 +125,11 @@ impl State {
         let mut block = [0u8; BLOCK_BYTES];
         block[..n].copy_from_slice(&self.buf[..n]);
 
-        compress(&mut h, &block, self.t + u128::from(self.buflen), true);
+        // The pending bytes count toward the length in the final block only.
+        let mut t = self.t;
+        t[0] = t[0].wrapping_add(u64::from(self.buflen));
+        t[1] = t[1].wrapping_add(u64::from(t[0] < u64::from(self.buflen)));
+        compress(&mut h, &block, t, true);
 
         let mut out = [0u8; OUT_BYTES];
         for (i, word) in h.iter().enumerate() {
@@ -128,7 +141,7 @@ impl State {
     /// Bytes absorbed so far, excluding any pending partial block.
     #[must_use]
     pub fn count(&self) -> u128 {
-        self.t
+        u128::from(self.t[0]) | (u128::from(self.t[1]) << 64)
     }
 
     /// Bytes pending in the unflushed block, 0 to 128.

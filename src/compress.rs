@@ -65,21 +65,27 @@ fn g(v: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y: u64) 
 /// | 2 | 95 |
 /// | 6 | 107 |
 ///
-/// The reason is the message schedule, not register pressure. A loop must load
-/// `SIGMA[r][i]` at runtime and compute an address per message word: the
-/// equivalent C body spends 60 index and address instructions per round, while
-/// this crate's whole library contains 10 byte-loads. Unrolled, every index is
-/// a compile-time constant.
+/// The reason is the message schedule, not register pressure. A rolled loop
+/// must load `SIGMA[r][i]` at runtime and compute an address per message word;
+/// unrolled, every index is a compile-time constant and no `ldrb` remains.
 ///
-/// Spilling is not the discriminator. Per rotate -- one unit of G-function work
-/// -- the C body spills 0.44 times and this one 0.41, but the C spends 7.34
-/// instructions where this spends 4.65.
+/// The comparison against C that once lived here is superseded. It measured a
+/// *rolled* C body and concluded the two languages diverged. The C library has
+/// since been hand-unrolled, and on aarch64 the two kernels are now
+/// assembly-equivalent: 1516 instructions against 1546, 380 rotates each
+/// (identical `{16:96, 24:96, 32:96, 63:92}` histograms, including the four
+/// final-round rotates both compilers fold into the output XOR), zero sigma
+/// byte-loads each, and real spill traffic of 0.150 against 0.153 ops per
+/// rotate once callee-saved registers are excluded.
 ///
-/// Note the C library reaches the opposite conclusion for itself, having
-/// measured `#pragma unroll` at 27% slower. That result stands for clang on
-/// that code; it did not transfer here.
+/// So the ~4.9 ns this crate leads by at the leaf shape is **not** in this
+/// function. It is in the surrounding path: `State::finalize` takes `&self`
+/// and works on local copies, where C's `ub_final` mutates its 232-byte state
+/// in place. Porting that shape to C measured 2.5 ns *slower* there, so the
+/// difference is not portable in either direction. See README.md and the C
+/// library's `docs/INTERNALS.md`.
 #[inline(always)]
-pub(crate) fn compress(h: &mut [u64; 8], block: &[u8; 128], t: u128, last: bool) {
+pub(crate) fn compress(h: &mut [u64; 8], block: &[u8; 128], t: [u64; 2], last: bool) {
     // Chunk-based load: `chunks_exact(8)` yields slices the compiler can prove
     // are 8 bytes, so `try_into` is a compile-time-checked reinterpret rather
     // than a bounds-checked copy.
@@ -105,8 +111,8 @@ pub(crate) fn compress(h: &mut [u64; 8], block: &[u8; 128], t: u128, last: bool)
         IV[1],
         IV[2],
         IV[3],
-        IV[4] ^ (t as u64),
-        IV[5] ^ ((t >> 64) as u64),
+        IV[4] ^ t[0],
+        IV[5] ^ t[1],
         IV[6] ^ last_mask,
         IV[7],
     ];
